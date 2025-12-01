@@ -136,6 +136,10 @@ app.get('/', (req, res) => {
   `);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('Serveur démarré sur http://0.0.0.0:' + PORT);
-});
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('Serveur démarré sur http://0.0.0.0:' + PORT);
+  });
+}
+
+module.exports = app;

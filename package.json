@@ -1,0 +1,13 @@
+{
+  "name": "puter-api",
+  "version": "1.0.0",
+  "description": "API URL utilisant Puter AI",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@heyputer/puter.js": "^2.1.7",
+    "express": "^4.22.0"
+  }
+}

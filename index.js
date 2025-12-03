@@ -1,8 +1,114 @@
 const express = require('express');
+const { fal } = require('@fal-ai/client');
 const app = express();
 const PORT = 5000;
 
 const API_KEY = process.env.API_KEY;
+const FAL_KEY = process.env.FAL_KEY;
+
+if (FAL_KEY) {
+  fal.config({ credentials: FAL_KEY });
+}
+
+app.get('/fal/edit', async (req, res) => {
+  const imageUrl = req.query.image || null;
+  const prompt = req.query.prompt || 'Edit this image';
+  const uid = req.query.uid || null;
+
+  if (!FAL_KEY) {
+    return res.json({
+      error: "FAL_KEY not configured",
+      message: "Please set the FAL_KEY environment variable with your Fal.ai API key"
+    });
+  }
+
+  if (!imageUrl) {
+    return res.json({
+      error: "Image URL required",
+      message: "Please provide an image URL using ?image=URL"
+    });
+  }
+
+  try {
+    const result = await fal.subscribe("fal-ai/nano-banana/edit", {
+      input: {
+        prompt: prompt,
+        image_url: imageUrl
+      }
+    });
+
+    const response = {
+      prompt: prompt,
+      model: "nano-banana/edit",
+      provider: "fal.ai",
+      image_url: imageUrl
+    };
+
+    if (uid) response.uid = uid;
+
+    if (result.data && result.data.images && result.data.images[0]) {
+      response.output_url = result.data.images[0].url;
+      response.output = result.data.images;
+    } else {
+      response.output = result.data || result;
+    }
+
+    res.json(response);
+
+  } catch (error) {
+    const result = {
+      error: "Erreur lors de l'édition Fal.ai",
+      message: error.message
+    };
+    if (uid) result.uid = uid;
+    res.json(result);
+  }
+});
+
+app.get('/fal/generate', async (req, res) => {
+  const prompt = req.query.prompt || 'A beautiful landscape';
+  const uid = req.query.uid || null;
+
+  if (!FAL_KEY) {
+    return res.json({
+      error: "FAL_KEY not configured",
+      message: "Please set the FAL_KEY environment variable with your Fal.ai API key"
+    });
+  }
+
+  try {
+    const result = await fal.subscribe("fal-ai/nano-banana", {
+      input: {
+        prompt: prompt
+      }
+    });
+
+    const response = {
+      prompt: prompt,
+      model: "nano-banana",
+      provider: "fal.ai"
+    };
+
+    if (uid) response.uid = uid;
+
+    if (result.data && result.data.images && result.data.images[0]) {
+      response.output_url = result.data.images[0].url;
+      response.output = result.data.images;
+    } else {
+      response.output = result.data || result;
+    }
+
+    res.json(response);
+
+  } catch (error) {
+    const result = {
+      error: "Erreur lors de la génération Fal.ai",
+      message: error.message
+    };
+    if (uid) result.uid = uid;
+    res.json(result);
+  }
+});
 
 app.get('/gpt', async (req, res) => {
   const imageUrl = req.query.image || null;
@@ -205,10 +311,26 @@ app.get('/', (req, res) => {
     }
     .badge-free { background: #28a745; color: white; }
     .badge-api { background: #6c757d; color: white; }
+    .badge-edit { background: #dc3545; color: white; }
   </style>
 </head>
 <body>
   <h1>AI API Hub</h1>
+
+  <h2>Fal.ai - Nano Banana <span class="badge badge-edit">Image Editing</span></h2>
+  
+  <div class="example">
+    <h3>Edition d'image (Image-to-Image):</h3>
+    <code>GET /fal/edit?image=URL_IMAGE&prompt=modification</code>
+    <p><a href="/fal/edit?image=https://assets.puter.site/doge.jpeg&prompt=Make the dog wear sunglasses">/fal/edit?image=...&prompt=Make the dog wear sunglasses</a></p>
+    <p><small>Changez le fond, les vetements, ajoutez des elements...</small></p>
+  </div>
+  
+  <div class="example">
+    <h3>Generation d'image (Text-to-Image):</h3>
+    <code>GET /fal/generate?prompt=description</code>
+    <p><a href="/fal/generate?prompt=A beautiful sunset over the ocean">/fal/generate?prompt=A beautiful sunset over the ocean</a></p>
+  </div>
   
   <h2>GPT-Image-1 (LaoZhang.ai) <span class="badge badge-api">API Key Required</span></h2>
   

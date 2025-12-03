@@ -2,6 +2,86 @@ const express = require('express');
 const app = express();
 const PORT = 5000;
 
+const API_KEY = process.env.API_KEY;
+
+app.get('/gpt', async (req, res) => {
+  const imageUrl = req.query.image || null;
+  const prompt = req.query.prompt || 'Describe this image';
+  const uid = req.query.uid || null;
+
+  if (!API_KEY) {
+    return res.json({
+      error: "API_KEY not configured",
+      message: "Please set the API_KEY environment variable with your LaoZhang.ai API key"
+    });
+  }
+
+  try {
+    const content = [
+      {
+        type: "text",
+        text: prompt
+      }
+    ];
+
+    if (imageUrl) {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: imageUrl
+        }
+      });
+    }
+
+    const response = await fetch('https://api.laozhang.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-image-1',
+        stream: false,
+        messages: [
+          {
+            role: 'user',
+            content: content
+          }
+        ]
+      })
+    });
+
+    const data = await response.json();
+
+    const result = {
+      prompt: prompt,
+      model: "gpt-image-1",
+      provider: "laozhang.ai"
+    };
+
+    if (imageUrl) result.image_url = imageUrl;
+    if (uid) result.uid = uid;
+
+    if (data.error) {
+      result.error = data.error;
+    } else if (data.choices && data.choices[0]) {
+      result.response = data.choices[0].message?.content || data.choices[0];
+    } else {
+      result.response = data;
+    }
+
+    res.json(result);
+
+  } catch (error) {
+    const result = {
+      error: "Erreur lors de la requête GPT-Image-1",
+      message: error.message
+    };
+    if (uid) result.uid = uid;
+    res.json(result);
+  }
+});
+
 app.get('/puter', (req, res) => {
   const prompt = req.query.prompt || 'What is life?';
   const imageUrl = req.query.image_url || null;
@@ -88,7 +168,7 @@ app.get('/', (req, res) => {
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Puter AI API</title>
+  <title>AI API Hub</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -98,6 +178,7 @@ app.get('/', (req, res) => {
       background: #f5f5f5;
     }
     h1 { color: #333; }
+    h2 { color: #555; margin-top: 40px; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
     code {
       background: #e0e0e0;
       padding: 2px 8px;
@@ -115,10 +196,35 @@ app.get('/', (req, res) => {
     }
     a { color: #007bff; }
     h3 { margin-top: 20px; }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .badge-free { background: #28a745; color: white; }
+    .badge-api { background: #6c757d; color: white; }
   </style>
 </head>
 <body>
-  <h1>Puter AI API</h1>
+  <h1>AI API Hub</h1>
+  
+  <h2>GPT-Image-1 (LaoZhang.ai) <span class="badge badge-api">API Key Required</span></h2>
+  
+  <div class="example">
+    <h3>Analyse d'image avec GPT:</h3>
+    <code>GET /gpt?image=URL_IMAGE&prompt=votre question</code>
+    <p><a href="/gpt?image=https://assets.puter.site/doge.jpeg&prompt=What do you see in this image?">/gpt?image=https://assets.puter.site/doge.jpeg&prompt=What do you see?</a></p>
+  </div>
+  
+  <div class="example">
+    <h3>Generation de texte avec GPT:</h3>
+    <code>GET /gpt?prompt=votre question</code>
+    <p><a href="/gpt?prompt=What is artificial intelligence?">/gpt?prompt=What is artificial intelligence?</a></p>
+  </div>
+
+  <h2>Puter AI <span class="badge badge-free">Free</span></h2>
   
   <div class="example">
     <h3>Chat simple:</h3>
